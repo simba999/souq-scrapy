@@ -96,7 +96,11 @@ class souq(scrapy.Spider):
                         item['Category'] = category_name
                         for detail_link in category_link:
                             item['Category_link'] = self.validate(detail_link)
-                            yield scrapy.Request(url=item['Category_link'], callback=self.parse_category_html, meta={'entry_item': item})
+                            if '/c/' in item['Category_link']:
+                                yield scrapy.Request(url=item['Category_link'], callback=self.get_json)
+                            else:
+                                yield scrapy.Request(url=item['Category_link'], callback=self.parse_category_html, meta={'entry_item': item})
+                            # yield scrapy.Request(url=item['Category_link'], callback=self.parse_category_html, meta={'entry_item': item})
             else:
                 level2_list = level0_item.xpath('.//ul[contains(@class, "menu-content")]//div[contains(@class, "columns")]//div[@class="row"]//div[contains(@class, "columns")]//div[@class="row"]')
                 item['Section'] = ''
@@ -111,7 +115,37 @@ class souq(scrapy.Spider):
                     item['Category'] = category_name
                     for detail_link in category_link:
                         item['Category_link'] = self.validate(detail_link)
-                        yield scrapy.Request(url=item['Category_link'], callback=self.parse_category_html, meta={'entry_item': item})
+                        if '/c/' in item['Category_link']:
+                            yield scrapy.Request(url=item['Category_link'], callback=self.get_json)
+                        else:
+                            yield scrapy.Request(url=item['Category_link'], callback=self.parse_category_html, meta={'entry_item': item})
+                        # yield scrapy.Request(url=item['Category_link'], callback=self.parse_category_html, meta={'entry_item': item})
+
+    def get_json(self, response):
+        category = response.url.split('/c/')[1].split('?')[0]
+        total_count = int(response.xpath("//li[@class='total']//span/text()").extract_first())
+        pageNumber = int(math.ceil(total_count / 30))
+        # pdb.set_trace()
+        for page in range(1, pageNumber+1):
+            detail_link = 'https://supermarket.souq.com/ae-en/search?campaign_id=' + category + '&page=' + str(page) + '&sort=best'
+            req = scrapy.Request(url=detail_link, callback=self.get_detail_json)
+            req.meta['link'] = response.url
+            yield req
+
+    def get_detail_json(self, response):
+        try:
+            json_data = json.loads(response.body)['data']
+            category_link = response.meta['link']
+
+            for entry in json_data:
+                item = dict()
+                item['Category_link'] = category_link
+                item['Department'] = ''
+                item['Category'] = ''
+                item['Section'] = ''
+                yield scrapy.Request(url=entry['item_url'], callback=self.parse_detail_html_page, meta={'entry_val': item})
+        except:
+            pass
 
 
     def parse_detail_page(self, response):

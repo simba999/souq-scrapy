@@ -38,6 +38,7 @@ class ChainxyPipeline(object):
                                             'Sub_category_image',
                                             'Product',
                                             'Product_description',
+                                            'Arabic_Product_description',
                                             'Product_quantity',
                                             'Product_price',
                                             'Product_image',
@@ -46,6 +47,7 @@ class ChainxyPipeline(object):
                                             'color_code',
                                             'Size',
                                             'Specification',
+                                            'Arabic_Specification',
                                             'Sold_by',
                                             'link',
                                             'ean'

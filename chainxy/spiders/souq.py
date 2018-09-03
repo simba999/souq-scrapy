@@ -6,7 +6,6 @@ from scrapy.http import FormRequest
 from scrapy.http import Request
 from chainxy.items import ChainItem
 from lxml import etree
-# from selenium import webdriver
 from lxml import html
 import uuid
 import urllib
@@ -15,7 +14,6 @@ import math
 import csv
 import re
 import math
-import pdb
 
 from peewee import *
 
@@ -126,17 +124,11 @@ class souq(scrapy.Spider):
                                     yield scrapy.Request(url=item['Category_link'], callback=self.get_json)
                             else:
                                 yield scrapy.Request(url=item['Category_link'], callback=self.parse_category_html, meta={'entry_item': item})
-                        # yield scrapy.Request(url=item['Category_link'], callback=self.parse_category_html, meta={'entry_item': item})
 
     def get_json(self, response):
         category = response.url.split('/c/')[1].split('?')[0]
-        try:
-            total_count = int(response.xpath("//li[@class='total']//span/text()").extract_first())
-        except:
-            print(response.url)
-            pdb.set_trace()
+        total_count = int(response.xpath("//li[@class='total']//span/text()").extract_first())
         pageNumber = int(math.ceil(total_count / 30))
-        # pdb.set_trace()
         for page in range(1, pageNumber+1):
             detail_link = 'https://supermarket.souq.com/ae-en/search?campaign_id=' + category + '&page=' + str(page) + '&sort=best'
             req = scrapy.Request(url=detail_link, callback=self.get_detail_json)
@@ -151,10 +143,6 @@ class souq(scrapy.Spider):
             for entry in json_data:
                 item = dict()
                 item['Category_link'] = category_link
-                # item['Department'] = ''
-                # item['Category'] = ''
-                # item['Section'] = ''
-                # yield scrapy.Request(url=entry['item_url'], callback=self.parse_detail_html_page, meta={'entry_val': item})
                 yield scrapy.Request(url=entry['item_url'].replace('ae-en', 'ae-ar'), callback=self.product_arabic_page, meta={'entry_val': item})
                 
         except:
@@ -201,7 +189,7 @@ class souq(scrapy.Spider):
         str_desc = ''
         for str_item in description:
             str_desc = str_desc + str_item
-            # str_desc = str_desc + self.validate(str_item)
+
         item['Product_description'] = self.validate(str_desc)
 
         for color_item in color_items:
@@ -340,7 +328,6 @@ class souq(scrapy.Spider):
         detail_links = response.xpath('//div[contains(@class, "grid-list")]//div[contains(@class,"single-item")]//a[contains(@class, "sPrimaryLink")]/@href').extract()
         for detail in detail_links:
             yield scrapy.Request(url=detail.replace('ae-en', 'ae-ar'), callback=self.product_arabic_page, meta={'entry_val': metadata})
-            # yield scrapy.Request(url=entry['item_url'].replace('ae-en', 'ae-ar'), callback=self.product_arabic_page, meta={'entry_val': item})
 
         next_link = response.xpath('//ul[contains(@class, "srp-pagination")]//li[contains(@class, "pagination-next")]//a')
         if len(next_link) != 0:
@@ -351,8 +338,7 @@ class souq(scrapy.Spider):
         metadata = response.meta['entry']
         item = dict()
         item = metadata
-        # item['ean'] = response.xpath('//div[@id="productTrackingParams"]/@data-ean').extract_first()
-        # souq_data = ProductSouq.select().where(ProductSouq.ean==item['ean'])
+
         item['Type'] = "product"
         item['Department'] = metadata['Department']
         try:
@@ -496,27 +482,6 @@ class souq(scrapy.Spider):
 
                 specification[sub_text.encode('utf8')] = tmp
 
-            # else:
-            #     spec_titles = response.xpath('//div[@id="specs-full"]//dl[@class="stats"]//dt//text()').extract()
-            #     spec_values = response.xpath('//div[@id="specs-full"]//dl[@class="stats"]//dd//text()').extract()
-            #     num = 1
-            #     tmp = OrderedDict()
-            #     for spec in spec_titles:
-            #         # try:
-            #         val = ''
-            #         try:
-            #             val = response.xpath('//div[@id="specs-full"]//dl[@class="stats"]//dd[' + str(num) + ']/text()').extract_first() or ''
-            #         except:
-            #             pass
-            #         tmp[spec.encode('utf-8')] = val.encode('utf-8')
-            #         if spec == u'Brand':
-            #             item['Brand'] = val
-            #         num = num + 1
-            #         # except:
-            #             # pass
-            #     specification = tmp
-
-        print(specification)
         item['Specification'] = json.dumps(specification)
 
     
@@ -550,14 +515,12 @@ class souq(scrapy.Spider):
         item = metadata
         item['ean'] = response.xpath('//div[@id="productTrackingParams"]/@data-ean').extract_first()
         souq_data = ProductSouq.select().where(ProductSouq.ean==item['ean'])
-        # pdb.set_trace()
+
         if souq_data:
             pass
         else:
             sub_category = self.validate(response.xpath('//div[contains(@class, "product-title")]//span//a[2]/text()').extract_first())
 
-            # spec_titles = response.xpath('//div[@id="specs-full"]//dl[@class="stats"]//dt//text()').extract()
-            # spec_values = response.xpath('//div[@id="specs-full"]//dl[@class="stats"]//dd//text()').extract()
             try:
                 specification = OrderedDict()
                 spec_part = response.text.split('<div id="specs-full"')[1].split('<li id="description"')[0]
@@ -692,7 +655,6 @@ class souq(scrapy.Spider):
                     specification = tmp
 
 
-            # response.text.split('<div id="specs-full"')[1].split('</section>')[0]
             description = response.xpath('//div[@id="description-full"]//text()').extract()
             if len(description) == 0:
                 description = response.xpath('//div[@id="description-short"]//text()').extract()

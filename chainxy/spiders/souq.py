@@ -208,7 +208,7 @@ class souq(scrapy.Spider):
         slick_dots_images = response.xpath('//a[@data-open="product-gallery-modal"]//img/@data-url').extract()
         images_list = []
         for slick_image in slick_dots_images:
-            base_dir = os.path.dirname(__file__)
+            base_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
             resource = urllib.urlopen(slick_image.encode('utf-8'))
             image_name = uuid.uuid4().hex + '.' + resource.info().type.split('/')[1]
             output = open(base_dir + '/images/' + image_name,"wb")

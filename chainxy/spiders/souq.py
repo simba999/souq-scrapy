@@ -14,6 +14,7 @@ import math
 import csv
 import re
 import math
+import pdb
 
 from peewee import *
 
@@ -62,145 +63,110 @@ class souq(scrapy.Spider):
         yield scrapy.Request(url=init_url, callback=self.parse_category)
 
     def parse_category(self, response):
-        level0_list = response.xpath('//ul[@id="megaMenuNav"]//li[contains(@class, "level0")]')
-        # print(level0_list)
-        for level0_item in level0_list:
+        start_url = raw_input('Input URL: ')
+        if start_url != '':
             item = dict()
-            department_name = self.validate(level0_item.xpath('./a/text()').extract_first())
-            if department_name is None or department_name == '':
-                department_name = 'fashion'
-
-            item['Department'] = department_name
-            level1_list = []
-            try:
-                level1_list = level0_item.xpath('.//div[@class="level1-container"]')
-            except:
-                level1_list = []
-
-            if len(level1_list) > 0:
-                level1_items = level1_list[0].xpath('.//li[contains(@class, "level1")]')
-                for level1_item in level1_items:
-                    section = self.validate(level1_item.xpath('./a/text()').extract_first())
-                    item['Section'] = section
-                    level2_list = level1_item.xpath('./ul[contains(@class, "menu-content")]//div[contains(@class, "container")]//div[contains(@class, "columns")]//div[@class="row"]')
-
-                    for level2_item in level2_list:
-                        category_name = self.validate(level2_item.xpath('.//h4//a/text()').extract_first())
-                        category_link = level2_item.xpath('.//li//a/@href').extract()
-                        if category_name.lower() == 'womens':
-                            category_name = 'women'
-                        if category_name.lower() == 'mens':
-                            category_name = 'men'
-
-                        item['Category'] = category_name
-                        for detail_link in category_link:
-                            item['Category_link'] = self.validate(detail_link)
-                            if '/c/' in item['Category_link']:
-                                if item['Category_link'].split('/c/')[1] != u'':
-                                    yield scrapy.Request(url=item['Category_link'], callback=self.get_json)
-                            else:
-                                yield scrapy.Request(url=item['Category_link'], callback=self.parse_category_html, meta={'entry_item': item})
-                            # yield scrapy.Request(url=item['Category_link'], callback=self.parse_category_html, meta={'entry_item': item})
+            item['Category_link'] = start_url
+            item['Department'] = ''
+            item['Category'] = ''
+            item['Section'] = ''
+            if '/c/' in item['Category_link']:
+                if item['Category_link'].split('/c/')[1] != u'':
+                    yield scrapy.Request(url=item['Category_link'], callback=self.get_json, meta={'entry_item': item}, dont_filter=True)
             else:
-                level2_list = level0_item.xpath('.//ul[contains(@class, "menu-content")]//div[contains(@class, "columns")]//div[@class="row"]//div[contains(@class, "columns")]//div[@class="row"]')
-                item['Section'] = ''
-                for level2_item in level2_list:
-                    category_names = level2_item.xpath('.//h4//text()').extract()
+                yield scrapy.Request(url=item['Category_link'], callback=self.parse_category_html, meta={'entry_item': item}, dont_filter=True)
+        else:
+            level0_list = response.xpath('//ul[@id="megaMenuNav"]//li[contains(@class, "level0")]')
+            # print(level0_list)
+            for level0_item in level0_list:
+                item = dict()
+                department_name = self.validate(level0_item.xpath('./a/text()').extract_first())
+                if department_name is None or department_name == '':
+                    department_name = 'fashion'
 
-                    num = 1
-                    for category_name in category_names:
-                        category_link = level2_item.xpath('.//ul[' + str(num) + ']//li//a/@href').extract()
-                        if category_name.lower() == 'womens':
-                            category_name = 'women'
-                        if category_name.lower() == 'mens':
-                            category_name = 'men'
+                item['Department'] = department_name
+                level1_list = []
+                try:
+                    level1_list = level0_item.xpath('.//div[@class="level1-container"]')
+                except:
+                    level1_list = []
 
-                        item['Category'] = category_name
-                        num = num + 1
-                        for detail_link in category_link:
-                            item['Category_link'] = self.validate(detail_link)
-                            if '/c/' in item['Category_link']:
-                                if item['Category_link'].split('/c/')[1] != u'':
-                                    yield scrapy.Request(url=item['Category_link'], callback=self.get_json)
-                            else:
-                                yield scrapy.Request(url=item['Category_link'], callback=self.parse_category_html, meta={'entry_item': item})
+                if len(level1_list) > 0:
+                    level1_items = level1_list[0].xpath('.//li[contains(@class, "level1")]')
+                    for level1_item in level1_items:
+                        section = self.validate(level1_item.xpath('./a/text()').extract_first())
+                        item['Section'] = section
+                        level2_list = level1_item.xpath('./ul[contains(@class, "menu-content")]//div[contains(@class, "container")]//div[contains(@class, "columns")]//div[@class="row"]')
+
+                        for level2_item in level2_list:
+                            category_name = self.validate(level2_item.xpath('.//h4//a/text()').extract_first())
+                            category_link = level2_item.xpath('.//li//a/@href').extract()
+                            if category_name.lower() == 'womens':
+                                category_name = 'women'
+                            if category_name.lower() == 'mens':
+                                category_name = 'men'
+
+                            item['Category'] = category_name
+                            for detail_link in category_link:
+                                item['Category_link'] = self.validate(detail_link)
+                                if '/c/' in item['Category_link']:
+                                    if item['Category_link'].split('/c/')[1] != u'':
+                                        yield scrapy.Request(url=item['Category_link'], callback=self.get_json, meta={'entry_item': item}, dont_filter=True)
+                                else:
+                                    yield scrapy.Request(url=item['Category_link'], callback=self.parse_category_html, meta={'entry_item': item}, dont_filter=True)
+                                # yield scrapy.Request(url=item['Category_link'], callback=self.parse_category_html, meta={'entry_item': item})
+                else:
+                    level2_list = level0_item.xpath('.//ul[contains(@class, "menu-content")]//div[contains(@class, "columns")]//div[@class="row"]//div[contains(@class, "columns")]//div[@class="row"]')
+                    item['Section'] = ''
+                    for level2_item in level2_list:
+                        category_names = level2_item.xpath('.//h4//text()').extract()
+
+                        num = 1
+                        for category_name in category_names:
+                            category_link = level2_item.xpath('.//ul[' + str(num) + ']//li//a/@href').extract()
+                            if category_name.lower() == 'womens':
+                                category_name = 'women'
+                            if category_name.lower() == 'mens':
+                                category_name = 'men'
+
+                            item['Category'] = category_name
+                            num = num + 1
+                            for detail_link in category_link:
+                                item['Category_link'] = self.validate(detail_link)
+                                if '/c/' in item['Category_link']:
+                                    if item['Category_link'].split('/c/')[1] != u'':
+                                        yield scrapy.Request(url=item['Category_link'], callback=self.get_json, meta={'entry_item': item}, dont_filter=True)
+                                else:
+                                    yield scrapy.Request(url=item['Category_link'], callback=self.parse_category_html, meta={'entry_item': item}, dont_filter=True)
 
     def get_json(self, response):
+        metadata = response.meta['entry_item']
         category = response.url.split('/c/')[1].split('?')[0]
         total_count = int(response.xpath("//li[@class='total']//span/text()").extract_first())
         pageNumber = int(math.ceil(total_count / 30))
         for page in range(1, pageNumber+1):
             detail_link = 'https://supermarket.souq.com/ae-en/search?campaign_id=' + category + '&page=' + str(page) + '&sort=best'
-            req = scrapy.Request(url=detail_link, callback=self.get_detail_json)
+            req = scrapy.Request(url=detail_link, callback=self.get_detail_json, dont_filter=True)
             req.meta['link'] = response.url
+            req.meta['data_item'] = metadata
             yield req
 
     def get_detail_json(self, response):
         try:
             json_data = json.loads(response.body)['data']
             category_link = response.meta['link']
+            metadata = response.meta['data_item']
 
             for entry in json_data:
                 item = dict()
+                item = metadata
                 item['Category_link'] = category_link
-                yield scrapy.Request(url=entry['item_url'].replace('ae-en', 'ae-ar'), callback=self.product_arabic_page, meta={'entry_val': item})
+                yield scrapy.Request(url=entry['item_url'].replace('ae-en', 'ae-ar'), callback=self.product_arabic_page, meta={'entry_val': item}, dont_filter=True)
                 
         except:
             pass
 
-
-    def parse_detail_page(self, response):
-        metadata = response.meta['entry']
-        item = dict()
-        item = metadata
-
-        color_items = response.xpath('//span[contains(@class, "has-tip")]')
-        color_values = []
-        item['Product'] = self.validate(response.xpath('//div[contains(@class, "product-title")]//h1/text()').extract_first())
-        item['image_links'] = response.xpath('//span[contains(@class, "has-tip")]/a/@data-url').extract()
-        item['Sold_by'] = self.validate(response.xpath('//span[@class="unit-seller-link"]//a/b/text()').extract_first())
-        item['Sub_category'] = self.validate(response.xpath('//div[contains(@class, "product-title")]//span//a[2]/text()').extract_first())
-        item['Product_quantity'] = ''
-        quantity = response.xpath('//div[@class="unit-labels"]//b//span/text()').extract_first()
-        if quantity:
-            quantity_vals = re.findall(r'\b\d+\b', quantity.encode('utf8'))
-            if len(quantity_vals) > 0:
-                item['product_quantity'] = quantity_vals[0]
-
-        spec_titles = response.xpath('//div[@id="specs-full"]//dl[@class="stats"]//dt//text()').extract()
-        spec_values = response.xpath('//div[@id="specs-full"]//dl[@class="stats"]//dd//text()').extract()
-        
-        # GET SPEC LIST INTO STRING
-        num = 1
-        tmp = {}
-        for spec in spec_titles:
-            try:
-                val = response.xpath('//div[@id="specs-full"]//dl[@class="stats"]//dd[' + str(num) + ']/text()').extract_first() or ''
-                tmp[spec.encode('utf-8')] = val.encode('utf-8')
-                num = num + 1
-            except:
-                pass
-
-        item['Specification'] = tmp
-        description = response.xpath('//div[@id="description-full"]//text()').extract()
-        if len(description) == 0:
-            description = response.xpath('//div[@id="description-short"]//text()').extract()
-
-        str_desc = ''
-        for str_item in description:
-            str_desc = str_desc + str_item
-
-        item['Product_description'] = self.validate(str_desc)
-
-        for color_item in color_items:
-            tmp = dict()
-            tmp['color'] = self.validate(color_item.xpath('./@data-value').extract_first())
-            tmp['color_image'] = self.validate(color_item.xpath('./a/@style').extract_first().split('background-image:url(')[1].split(');')[0])
-            tmp['color_link'] = self.validate(color_item.xpath('./a/@data-url').extract_first())
-            yield scrapy.Request(url=tmp['color_link'], callback=self.parse_detail_image, meta={'entry': item, 'color': tmp['color']})            
-
     def parse_detail_image(self, response):
-        metadata = dict()
         metadata = response.meta['entry']
         color = response.meta['color']
         detail_link = response.meta['detail_link']
@@ -325,13 +291,18 @@ class souq(scrapy.Spider):
 
     def parse_category_html(self, response):
         metadata = response.meta['entry_item']
-        detail_links = response.xpath('//div[contains(@class, "grid-list")]//div[contains(@class,"single-item")]//a[contains(@class, "sPrimaryLink")]/@href').extract()
+        detail_links = []
+        if '/c/' in response.url:
+            if response.url.split('/c/')[1] != u'':
+                detail_links = response.xpath('//div[contains(@class, "grid-list")]//div[contains(@class,"img-bucket")]//a[contains(@class, "img-link")]/@href').extract()
+        else:
+            detail_links = response.xpath('//div[contains(@class, "grid-list")]//div[contains(@class,"single-item")]//a[contains(@class, "sPrimaryLink")]/@href').extract()
         for detail in detail_links:
             yield scrapy.Request(url=detail.replace('ae-en', 'ae-ar'), callback=self.product_arabic_page, meta={'entry_val': metadata})
 
         next_link = response.xpath('//ul[contains(@class, "srp-pagination")]//li[contains(@class, "pagination-next")]//a')
         if len(next_link) != 0:
-            yield scrapy.Request(url=next_link.xpath('./@href').extract_first(), callback=self.parse_category_html, meta={'entry_item': metadata})
+            yield scrapy.Request(url=next_link.xpath('./@href').extract_first(), callback=self.parse_category_html, meta={'entry_item': metadata}, dont_filter=True)
 
 
     def parse_detail_html_page(self, response):
@@ -340,7 +311,6 @@ class souq(scrapy.Spider):
         item = metadata
 
         item['Type'] = "product"
-        item['Department'] = metadata['Department']
         try:
             item['Section'] = metadata['Section']
         except:
@@ -494,13 +464,26 @@ class souq(scrapy.Spider):
             str_desc = str_desc + str_item
 
         item['Product_description'] = self.validate(str_desc)
-        
-        for color_item in color_items:
+        if len(color_items) > 0:
+            for color_item in color_items:
+                tmp = dict()
+                tmp['color'] = self.validate(color_item.xpath('./@data-value').extract_first())
+                tmp['color_image'] = self.validate(color_item.xpath('./a/@style').extract_first().split('background-image:url(')[1].split(');')[0])
+                tmp['color_link'] = self.validate(color_item.xpath('./a/@data-url').extract_first())
+                cate_request = scrapy.Request(url=tmp['color_link'], callback=self.parse_detail_image, dont_filter=True)
+                new_tmp = dict()
+                for item_val in item:
+                    new_tmp[item_val] = item[item_val]
+                cate_request.meta['entry'] = new_tmp
+                cate_request.meta['color'] = tmp['color']
+                cate_request.meta['detail_link'] = tmp['color_link']
+                yield cate_request
+        else:
             tmp = dict()
-            tmp['color'] = self.validate(color_item.xpath('./@data-value').extract_first())
-            tmp['color_image'] = self.validate(color_item.xpath('./a/@style').extract_first().split('background-image:url(')[1].split(');')[0])
-            tmp['color_link'] = self.validate(color_item.xpath('./a/@data-url').extract_first())
-            cate_request = scrapy.Request(url=tmp['color_link'], callback=self.parse_detail_image)
+            tmp['color'] = self.validate(response.xpath('//div[@id="colors_en"]//a/text()').extract_first())
+            tmp['color_image'] = ''
+            tmp['color_link'] = response.url
+            cate_request = scrapy.Request(url=tmp['color_link'], callback=self.parse_detail_image, dont_filter=True)
             new_tmp = dict()
             for item_val in item:
                 new_tmp[item_val] = item[item_val]
@@ -515,7 +498,6 @@ class souq(scrapy.Spider):
         item = metadata
         item['ean'] = response.xpath('//div[@id="productTrackingParams"]/@data-ean').extract_first()
         souq_data = ProductSouq.select().where(ProductSouq.ean==item['ean'])
-
         if souq_data:
             pass
         else:
@@ -670,8 +652,7 @@ class souq(scrapy.Spider):
             item['Product'] = product
             item['Arabic_Specification'] = json.dumps(specification).decode('unicode-escape').encode('utf8')
             item['Arabic_Product_description'] = product_description
-
-            cate_request = scrapy.Request(url=response.url.replace('ae-ar', 'ae-en'), callback=self.parse_detail_html_page)
+            cate_request = scrapy.Request(url=response.url.replace('ae-ar', 'ae-en'), callback=self.parse_detail_html_page, dont_filter=True)
             new_tmp = dict()
             for item_val in item:
                 new_tmp[item_val] = item[item_val]

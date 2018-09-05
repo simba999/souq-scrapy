@@ -294,13 +294,13 @@ class souq(scrapy.Spider):
         detail_links = []
         if '/c/' in response.url:
             if response.url.split('/c/')[1] != u'':
-                detail_links = response.xpath('//div[contains(@class, "grid-list")]//div[contains(@class,"img-bucket")]//a[contains(@class, "img-link")]/@href').extract()
+                detail_links = response.xpath('//div[contains(@class,"img-bucket")]//a[contains(@class, "img-link")]/@href').extract()
         else:
-            detail_links = response.xpath('//div[contains(@class, "grid-list")]//div[contains(@class,"single-item")]//a[contains(@class, "sPrimaryLink")]/@href').extract()
+            detail_links = response.xpath('//div[contains(@class,"single-item")]//a[contains(@class, "img-link")]/@href').extract()
         for detail in detail_links:
             yield scrapy.Request(url=detail.replace('ae-en', 'ae-ar'), callback=self.product_arabic_page, meta={'entry_val': metadata})
 
-        next_link = response.xpath('//ul[contains(@class, "srp-pagination")]//li[contains(@class, "pagination-next")]//a')
+        next_link = response.xpath('//ul[contains(@class, "srp-pagination")]//li[contains(@class, "pagination-next goToPage")]//a')
         if len(next_link) != 0:
             yield scrapy.Request(url=next_link.xpath('./@href').extract_first(), callback=self.parse_category_html, meta={'entry_item': metadata}, dont_filter=True)
 
